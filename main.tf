@@ -1,51 +1,74 @@
 provider "aws" {
-  region = "ap-south-1"
-}
-
-variable "ami_id" {
-    description = "value of ami-id"
-    type = string
-    default = "ami-0d0ad8bb301edb745"
+    
+    region = "ap-south-1"
   
 }
 
-variable "instance_type" {
-    description = "value od instance type"
-    type = string
-    default ="t2.micro"
+# This data block is for the first availability zone
+data "aws_availability_zones" "name" {
+
+    state = "available"
+}
+
+output "available-zone" {
+
+    value = data.aws_availability_zones.name.names
   
 }
 
-variable "key_name" {
-    description = "value of key name"
-    type = string
-    default = "newkey" 
+# This data block is for the default security group in the first availability zone
+data "aws_security_group" "name" {
+
+    name = "default"
 }
 
-resource "aws_instance" "terraform-instance" {
+output "security_group_id" {
 
-    ami = var.ami_id
-    instance_type = var.instance_type
-    key_name = var.key_name 
+    value = data.aws_security_group.name.id
+  
+}
+
+# This data block is for the default VPC
+data "aws_vpc" "name" {
 
     tags = {
-        Name = "Terraform-Instance"
-        Environment = "DevOps"
-        Owner = "Abhishek Pisal"
+      type = "default_vpc"
     }
+}
+
+output "vpc_id" {
+
+    value = data.aws_vpc.name.id
 
 }
 
-output "instance-id" {
+# This data block is for the latest Amazon Linux AMI
+data "aws_ami" "amazon_linux" {
 
-    value = aws_instance.terraform-instance.id
-    description = "ID of the created terraform-instance"
+    most_recent = true
+    owners = ["amazon"]
 
+    filter {
+        name = "name"
+        values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+    }
 }
 
-output "public-ip" {
+output "ami_id" {
 
-    value =aws_instance.terraform-instance.public_ip
-    description = "Public IP of the created terraform-instance"
+    value = data.aws_ami.amazon_linux.id  
+}
 
+
+resource "aws_instance" "Test_instance" {
+    
+    ami = data.aws_ami.amazon_linux.id
+    instance_type = "t2.micro"
+    key_name = "newkey"
+    vpc_security_group_ids = [data.aws_security_group.name.id]
+
+    tags = {
+      Name = "Test_insttance"
+    }
+  
 }
